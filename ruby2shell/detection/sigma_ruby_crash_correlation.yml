@@ -1,0 +1,59 @@
+# Requires the normalized fields documented in detection/README.md.
+# Keep all three documents together when loading into a correlation backend.
+title: Ruby Memory Error Event
+name: ruby_memory_error
+logsource:
+  category: application
+  product: ruby
+detection:
+  selection:
+    message|contains:
+      - '[BUG] Segmentation fault'
+      - 'malloc(): corrupted top size'
+      - 'free(): invalid next size'
+      - 'corrupted double-linked list'
+      - 'double free or corruption'
+      - 'SIGSEGV'
+      - 'SIGABRT'
+  required_context:
+    service_instance|exists: true
+    service_instance|re: '.+'
+  condition: selection and required_context
+---
+title: HTTP Request With Repeated Encoded Sharp S Bytes
+name: ruby_suspicious_request
+logsource:
+  category: webserver
+detection:
+  selection:
+    request_raw|re: '(?:%[dD][fF]){21,}'
+  required_context:
+    service_instance|exists: true
+    service_instance|re: '.+'
+  condition: selection and required_context
+---
+title: Ruby Memory Error Near Suspicious HTTP Request
+id: 3f8a2c1e-9b4d-4e7a-8c1f-2d3e4f5a6b7c
+status: experimental
+description: >-
+  Correlates a Ruby memory-error event and an HTTP request containing repeated
+  percent-encoded 0xDF bytes for the same service instance within one minute.
+  Order is not enforced because request logs may be written at request completion.
+  This is a triage signal, not proof of exploitation or source attribution.
+  Requires normalized telemetry and a backend supporting temporal correlation.
+references:
+  - https://github.com/ruby/ruby/security/advisories/GHSA-34m4-m9fh-gqp5
+  - https://sigmahq.io/sigma-specification/specification/sigma-correlation-rules-specification.html
+date: 2026-11-20
+correlation:
+  type: temporal
+  rules:
+    - ruby_memory_error
+    - ruby_suspicious_request
+  group-by:
+    - service_instance
+  timespan: 1m
+falsepositives:
+  - Native-extension faults coinciding with unrelated matching requests
+  - Authorized lab reproduction
+level: medium

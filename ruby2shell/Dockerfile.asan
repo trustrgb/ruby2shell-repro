@@ -1,0 +1,38 @@
+ARG RUBY_VERSION=3.4.12
+FROM buildpack-deps:bookworm
+
+LABEL maintainer="security-research"
+LABEL description="Ruby2Shell ASAN build for precise memory error detection"
+
+ARG RUBY_VERSION
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bison \
+    libssl-dev \
+    libyaml-dev \
+    zlib1g-dev \
+    libffi-dev \
+    libgdbm-dev \
+    libreadline-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+RUN curl -O "https://cache.ruby-lang.org/pub/ruby/${RUBY_VERSION%.*}/ruby-${RUBY_VERSION}.tar.gz" \
+    && tar xf "ruby-${RUBY_VERSION}.tar.gz" \
+    && cd "ruby-${RUBY_VERSION}" \
+    && ./configure \
+        --prefix=/opt/ruby-asan \
+        --disable-install-doc \
+        CFLAGS="-fsanitize=address -g -O0" \
+        LDFLAGS="-fsanitize=address" \
+    && make -j"$(nproc)" \
+    && make install \
+    && cd .. \
+    && rm -rf "ruby-${RUBY_VERSION}" "ruby-${RUBY_VERSION}.tar.gz"
+
+ENV PATH="/opt/ruby-asan/bin:${PATH}"
+ENV ASAN_OPTIONS="detect_leaks=0:abort_on_error=1:print_stats=1"
+
+WORKDIR /work
+
+CMD ["bash"]

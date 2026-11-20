@@ -1,0 +1,26 @@
+version: "3.8"
+
+# Standalone ASAN build for precise memory error detection.
+# Usage:
+#   docker compose -f lab/docker-compose.asan.yml up -d
+#   docker compose -f lab/docker-compose.asan.yml exec ruby-asan bash
+#   ASAN_OPTIONS=detect_leaks=0 ruby /work/trigger/poc_trigger.rb
+
+services:
+  ruby-asan:
+    build:
+      context: ..
+      dockerfile: Dockerfile.asan
+      args:
+        RUBY_VERSION: "3.4.12"
+    container_name: ruby2shell-asan
+    volumes:
+      - ../trigger:/work/trigger:ro
+    working_dir: /work
+    command: bash
+    stdin_open: true
+    tty: true
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined

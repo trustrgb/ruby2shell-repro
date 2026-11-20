@@ -1,0 +1,60 @@
+version: "3.8"
+
+services:
+  ruby-vulnerable:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        RUBY_VERSION: "3.4.12"
+    container_name: ruby2shell-vuln
+    volumes:
+      - ./trigger:/work/trigger:ro
+      - ./detection:/work/detection:ro
+      - ./app:/work/app:ro
+    working_dir: /work
+    command: bash
+    stdin_open: true
+    tty: true
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+
+  ruby-fixed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        RUBY_VERSION: "3.4.13"
+    container_name: ruby2shell-fixed
+    volumes:
+      - ./trigger:/work/trigger:ro
+      - ./detection:/work/detection:ro
+      - ./app:/work/app:ro
+    working_dir: /work
+    command: bash
+    stdin_open: true
+    tty: true
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+
+  ruby-asan:
+    build:
+      context: .
+      dockerfile: Dockerfile.asan
+      args:
+        RUBY_VERSION: "3.4.12"
+    container_name: ruby2shell-asan
+    volumes:
+      - ./trigger:/work/trigger:ro
+    working_dir: /work
+    command: bash
+    stdin_open: true
+    tty: true
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
